@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Staff Dashboard — Zomato Style Preview</title>
+<style>
+  /* ── Reset & Base ─────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Nunito', 'Segoe UI', sans-serif;
+    background: #FFF8F5;
+    min-height: 100vh;
+    color: #1C1C1C;
+  }
+  button { font-family: inherit; }
+
+  /* ── Animations ──────────────────────────────────────────────────────── */
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card { animation: fadeIn 0.3s ease forwards; }
+  button:active { transform: scale(0.96) !important; }
+
+  /* ── Scrollbar ────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #FFF8F5; }
+  ::-webkit-scrollbar-thumb { background: #FFD0C0; border-radius: 10px; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 1 — STICKY HEADER
+     Gradient: Zomato red #E23744 → orange #FF6B35
+════════════════════════════════════════════════════════════════════════ -->
+<div id="header" style="
+  background: linear-gradient(135deg, #E23744 0%, #FF6B35 100%);
+  padding: 20px 24px 36px;
+  position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 4px 24px rgba(226,55,68,0.3);
+">
+  <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-start;">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <span style="font-size:26px;">🍽️</span>
+        <span style="color:rgba(255,255,255,0.82);font-size:12px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;">Staff Portal</span>
+      </div>
+      <h1 style="color:#fff;font-size:22px;font-weight:900;margin:0;">Attendance Dashboard</h1>
+      <p style="color:rgba(255,255,255,0.72);font-size:13px;margin-top:5px;" id="dateDisplay"></p>
+    </div>
+    <div style="
+      width:46px;height:46px;border-radius:50%;
+      background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-weight:900;font-size:15px;
+    ">ST</div>
+  </div>
+</div>
+
+<div style="max-width:1100px;margin:0 auto;padding:0 16px 60px;">
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 2 — STATS BAR (overlaps header — Zomato card effect)
+════════════════════════════════════════════════════════════════════════ -->
+<div id="statsBar" style="
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-top:-20px;
+  margin-bottom:22px;
+"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 3 — SHIFT SELECTOR
+════════════════════════════════════════════════════════════════════════ -->
+<div style="
+  background:#fff;border-radius:18px;padding:18px 20px;
+  margin-bottom:18px;
+  box-shadow:0 2px 14px rgba(0,0,0,0.07);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+">
+  <div>
+    <p style="font-weight:800;color:#1C1C1C;font-size:15px;">Select Shift</p>
+    <p style="color:#7C7C7C;font-size:12px;margin-top:3px;">All attendance recorded for this shift</p>
+  </div>
+  <div style="
+    display:flex;background:#FFF8F5;border-radius:50px;
+    padding:4px;border:1.5px solid #FFE0D4;
+  ">
+    <button onclick="setShift('morning')" id="shiftMorning" class="shiftBtn active-shift" style="
+      padding:10px 26px;border-radius:50px;border:none;cursor:pointer;
+      font-weight:800;font-size:14px;font-family:inherit;
+      display:flex;align-items:center;gap:6px;transition:all 0.2s ease;
+    ">🌅 Morning</button>
+    <button onclick="setShift('evening')" id="shiftEvening" class="shiftBtn" style="
+      padding:10px 26px;border-radius:50px;border:none;cursor:pointer;
+      font-weight:800;font-size:14px;font-family:inherit;
+      background:transparent;color:#7C7C7C;
+      display:flex;align-items:center;gap:6px;transition:all 0.2s ease;
+    ">🌙 Evening</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 4 — SEARCH & FILTER BAR
+════════════════════════════════════════════════════════════════════════ -->
+<div style="
+  background:#fff;border-radius:18px;padding:14px 16px;
+  margin-bottom:20px;
+  box-shadow:0 2px 14px rgba(0,0,0,0.07);
+  display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+">
+  <div style="flex:1;min-width:200px;position:relative;">
+    <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;">🔍</span>
+    <input
+      type="text" id="searchInput" placeholder="Search customer name..."
+      oninput="filterCustomers()"
+      style="
+        width:100%;padding:11px 14px 11px 42px;
+        border-radius:12px;border:1.5px solid #FFE0D4;
+        font-size:14px;color:#1C1C1C;background:#FFF8F5;
+        outline:none;font-family:inherit;transition:border-color 0.2s;
+      "
+      onfocus="this.style.borderColor='#E23744'"
+      onblur="this.style.borderColor='#FFE0D4'"
+    />
+  </div>
+  <div style="display:flex;gap:8px;" id="filterBtns">
+    <button onclick="setFilter('all')" id="filterAll" class="filterBtn active-filter" style="
+      padding:10px 18px;border-radius:50px;border:none;
+      font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;
+      transition:all 0.2s ease;
+    ">All</button>
+    <button onclick="setFilter('monthly')" id="filterMonthly" class="filterBtn" style="
+      padding:10px 18px;border-radius:50px;border:1.5px solid #FFE0D4;
+      background:#FFF8F5;color:#7C7C7C;
+      font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;
+      transition:all 0.2s ease;
+    ">Monthly</button>
+    <button onclick="setFilter('daily')" id="filterDaily" class="filterBtn" style="
+      padding:10px 18px;border-radius:50px;border:1.5px solid #FFE0D4;
+      background:#FFF8F5;color:#7C7C7C;
+      font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;
+      transition:all 0.2s ease;
+    ">Daily</button>
+  </div>
+  <div id="countBadge" style="
+    padding:8px 14px;border-radius:50px;
+    background:#FFF1F2;color:#E23744;
+    font-weight:800;font-size:13px;white-space:nowrap;
+  "></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 5 — ATTENDANCE CARDS GRID
+════════════════════════════════════════════════════════════════════════ -->
+<div id="cardsGrid" style="
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:14px;
+  margin-bottom:28px;
+"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 6 — EXTRAS SUMMARY PANEL
+════════════════════════════════════════════════════════════════════════ -->
+<div style="background:#fff;border-radius:18px;padding:20px;box-shadow:0 2px 14px rgba(0,0,0,0.07);">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h2 style="font-weight:900;color:#1C1C1C;font-size:17px;">➕ Extras Tracker</h2>
+      <p style="color:#7C7C7C;font-size:13px;margin-top:4px;">Total add-ons ordered this shift</p>
+    </div>
+    <div id="extrasTotalBadge" style="
+      padding:7px 16px;border-radius:50px;
+      background:linear-gradient(135deg,#E23744,#FF6B35);
+      color:#fff;font-weight:800;font-size:13px;
+    "></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;" id="extrasPanelGrid"></div>
+</div>
+
+</div><!-- /max-width wrapper -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     SECTION 7 — EXTRAS BOTTOM SHEET MODAL
+     Pattern: Zomato / Swiggy bottom sheet add-to-cart style
+════════════════════════════════════════════════════════════════════════ -->
+<div id="extrasOverlay" onclick="closeModal(event)" style="
+  display:none;
+  position:fixed;inset:0;
+  background:rgba(28,28,28,0.6);
+  backdrop-filter:blur(4px);
+  z-index:100;
+  align-items:flex-end;justify-content:center;
+">
+  <div id="extrasSheet" style="
+    background:#fff;border-radius:24px 24px 0 0;
+    width:100%;max-width:540px;
+    padding:24px 20px 36px;
+    box-shadow:0 -8px 40px rgba(0,0,0,0.15);
+    animation:slideUp 0.3s ease;
+  ">
+    <div style="width:40px;height:4px;border-radius:2px;background:#E5E7EB;margin:0 auto 20px;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div>
+        <h3 id="modalTitle" style="font-weight:900;color:#1C1C1C;font-size:18px;"></h3>
+        <p id="modalSubtitle" style="color:#7C7C7C;font-size:13px;margin-top:4px;"></p>
+      </div>
+      <button onclick="closeExtras()" style="
+        width:36px;height:36px;border-radius:50%;border:none;
+        background:#F3F4F6;cursor:pointer;font-size:18px;color:#6B7280;
+        display:flex;align-items:center;justify-content:center;
+      ">✕</button>
+    </div>
+    <div id="extrasItemList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;max-height:50vh;overflow-y:auto;"></div>
+    <div style="
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 18px;background:#FFF8F5;border-radius:14px;margin-bottom:14px;
+    ">
+      <span style="font-weight:700;color:#7C7C7C;font-size:14px;">Order Total</span>
+      <span id="modalTotal" style="font-weight:900;color:#E23744;font-size:20px;">₹0</span>
+    </div>
+    <button onclick="saveExtras()" style="
+      width:100%;padding:16px;border-radius:14px;border:none;
+      background:linear-gradient(135deg,#E23744,#FF6B35);
+      color:#fff;font-weight:800;font-size:16px;cursor:pointer;
+      box-shadow:0 6px 20px rgba(226,55,68,0.35);font-family:inherit;
+    ">Save Extras 🍱</button>
+  </div>
+</div>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────────
+let customers = [
+  { id:"1", name:"Rahul Sharma",   type:"monthly", attended:true,  thali:true,  extras:1 },
+  { id:"2", name:"Priya Patel",    type:"monthly", attended:false, thali:false, extras:0 },
+  { id:"3", name:"Amit Verma",     type:"daily",   attended:true,  thali:true,  extras:2 },
+  { id:"4", name:"Sneha Joshi",    type:"monthly", attended:true,  thali:false, extras:0 },
+  { id:"5", name:"Karan Mehta",    type:"daily",   attended:false, thali:false, extras:0 },
+  { id:"6", name:"Divya Reddy",    type:"monthly", attended:true,  thali:true,  extras:3 },
+  { id:"7", name:"Rohit Kumar",    type:"monthly", attended:false, thali:false, extras:0 },
+  { id:"8", name:"Ananya Singh",   type:"daily",   attended:true,  thali:true,  extras:1 },
+  { id:"9", name:"Vikram Nair",    type:"daily",   attended:false, thali:false, extras:0 },
+  { id:"10",name:"Pooja Gupta",    type:"monthly", attended:true,  thali:true,  extras:0 },
+];
+
+const EXTRAS = [
+  { id:"e1", name:"Extra Roti", price:10, icon:"🫓" },
+  { id:"e2", name:"Extra Dal",  price:15, icon:"🍲" },
+  { id:"e3", name:"Sweet",      price:20, icon:"🍮" },
+  { id:"e4", name:"Papad",      price:5,  icon:"🥙" },
+  { id:"e5", name:"Chaas",      price:12, icon:"🥛" },
+  { id:"e6", name:"Pickle",     price:8,  icon:"🫙" },
+];
+
+let currentShift  = "morning";
+let currentFilter = "all";
+let currentSearch = "";
+let openModalId   = null;
+let selectedExtras = {};
+
+// ─── DATE DISPLAY ───────────────────────────────────────────────────────────
+document.getElementById("dateDisplay").textContent = new Date().toLocaleDateString("en-IN", {
+  weekday:"long", day:"numeric", month:"long", year:"numeric"
+});
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+const getInitials = name => name.split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
+
+function getStats() {
+  return {
+    present: customers.filter(c=>c.attended).length,
+    absent:  customers.filter(c=>!c.attended).length,
+    thali:   customers.filter(c=>c.thali).length,
+    extras:  customers.reduce((s,c)=>s+c.extras, 0),
+  };
+}
+
+function getFiltered() {
+  return customers.filter(c => {
+    const ms = c.name.toLowerCase().includes(currentSearch.toLowerCase());
+    const mf = currentFilter==="all" || c.type===currentFilter;
+    return ms && mf;
+  });
+}
+
+// ─── RENDER STATS BAR ───────────────────────────────────────────────────────
+function renderStats() {
+  const s = getStats();
+  const items = [
+    { label:"Present", value:s.present, icon:"✅", color:"#22C55E", bg:"#F0FDF4" },
+    { label:"Absent",  value:s.absent,  icon:"❌", color:"#E23744", bg:"#FFF1F2" },
+    { label:"Thalis",  value:s.thali,   icon:"🍱", color:"#FF6B35", bg:"#FFF4EE" },
+    { label:"Extras",  value:s.extras,  icon:"➕", color:"#8B5CF6", bg:"#F5F3FF" },
+  ];
+  document.getElementById("statsBar").innerHTML = items.map(i=>`
+    <div class="card" style="
+      background:#fff;border-radius:16px;padding:18px 14px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+      border:1px solid rgba(0,0,0,0.05);
+    ">
+      <div style="width:42px;height:42px;border-radius:12px;background:${i.bg};
+        display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px;">
+        ${i.icon}
+      </div>
+      <div style="font-size:30px;font-weight:900;color:#1C1C1C;line-height:1;">${i.value}</div>
+      <div style="font-size:12px;color:#7C7C7C;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-top:6px;">
+        ${i.label}
+      </div>
+    </div>
+  `).join("");
+  document.getElementById("extrasTotalBadge").textContent = s.extras + " items";
+}
+
+// ─── RENDER EXTRAS PANEL ────────────────────────────────────────────────────
+function renderExtrasPanel() {
+  document.getElementById("extrasPanelGrid").innerHTML = EXTRAS.map(e=>`
+    <div style="
+      background:#FFF8F5;border:1.5px solid #FFE0D4;
+      border-radius:14px;padding:14px 10px;text-align:center;
+    ">
+      <div style="font-size:28px;margin-bottom:6px;">${e.icon}</div>
+      <p style="font-weight:800;font-size:13px;color:#1C1C1C;margin:0;">${e.name}</p>
+      <p style="font-size:12px;color:#E23744;font-weight:700;margin:4px 0 0;">₹${e.price}</p>
+    </div>
+  `).join("");
+}
+
+// ─── RENDER CUSTOMER CARDS ──────────────────────────────────────────────────
+function renderCards() {
+  const filtered = getFiltered();
+  document.getElementById("countBadge").textContent = filtered.length + " customers";
+  if (filtered.length === 0) {
+    document.getElementById("cardsGrid").innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:#7C7C7C;">
+        <div style="font-size:64px;margin-bottom:16px;">🍽️</div>
+        <p style="font-weight:800;font-size:18px;color:#1C1C1C;margin:0 0 8px;">No customers found</p>
+        <p style="margin:0;font-size:14px;">Try adjusting your search or filter</p>
+      </div>`;
+    return;
+  }
+  document.getElementById("cardsGrid").innerHTML = filtered.map(c => `
+    <div class="card" id="card-${c.id}" style="
+      background:#fff;border-radius:18px;padding:18px;
+      box-shadow:${c.attended ? '0 4px 20px rgba(34,197,94,0.12)' : '0 2px 12px rgba(0,0,0,0.06)'};
+      border:1.5px solid ${c.attended ? 'rgba(34,197,94,0.25)' : 'transparent'};
+      transition:all 0.25s ease;position:relative;overflow:hidden;
+    ">
+      ${c.attended ? `<div style="position:absolute;top:0;left:0;right:0;height:3px;
+        background:linear-gradient(90deg,#22C55E,#4ADE80);"></div>` : ''}
+
+      <!-- Avatar + Name + Badge -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div style="
+          width:46px;height:46px;border-radius:50%;flex-shrink:0;
+          background:${c.attended
+            ? 'linear-gradient(135deg,#E23744,#FF6B35)'
+            : 'linear-gradient(135deg,#E5E7EB,#D1D5DB)'};
+          display:flex;align-items:center;justify-content:center;
+          color:#fff;font-weight:900;font-size:15px;
+          box-shadow:${c.attended ? '0 4px 12px rgba(226,55,68,0.3)' : 'none'};
+        ">${getInitials(c.name)}</div>
+        <div style="flex:1;min-width:0;">
+          <p style="font-weight:800;color:#1C1C1C;font-size:15px;margin:0;
+            overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</p>
+          <span style="
+            display:inline-block;margin-top:3px;padding:2px 10px;border-radius:50px;
+            font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;
+            background:${c.type==='monthly' ? '#FFF4EE' : '#F5F3FF'};
+            color:${c.type==='monthly' ? '#FF6B35' : '#8B5CF6'};
+          ">${c.type==='monthly' ? '📅 Monthly' : '☀️ Daily'}</span>
+        </div>
+        ${c.extras > 0 ? `
+          <div style="
+            min-width:22px;height:22px;border-radius:50%;padding:0 6px;
+            background:#8B5CF6;color:#fff;font-weight:800;font-size:11px;
+            display:flex;align-items:center;justify-content:center;
+          ">+${c.extras}</div>` : ''}
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:8px;">
+        <button onclick="toggleAttendance('${c.id}')" style="
+          flex:1;padding:10px 6px;border-radius:12px;border:none;cursor:pointer;
+          font-weight:800;font-size:12px;font-family:inherit;
+          background:${c.attended ? 'linear-gradient(135deg,#22C55E,#4ADE80)' : '#F3F4F6'};
+          color:${c.attended ? '#fff' : '#6B7280'};
+          box-shadow:${c.attended ? '0 4px 12px rgba(34,197,94,0.3)' : 'none'};
+          transition:all 0.2s ease;display:flex;flex-direction:column;align-items:center;gap:3px;
+        ">
+          <span style="font-size:18px;">${c.attended ? '✅' : '⬜'}</span>Present
+        </button>
+
+        <button onclick="toggleThali('${c.id}')" ${!c.attended ? 'disabled' : ''} style="
+          flex:1;padding:10px 6px;border-radius:12px;border:none;
+          cursor:${c.attended ? 'pointer' : 'not-allowed'};
+          font-weight:800;font-size:12px;font-family:inherit;
+          background:${c.thali ? 'linear-gradient(135deg,#FF6B35,#FF8C42)' : '#F3F4F6'};
+          color:${c.thali ? '#fff' : c.attended ? '#6B7280' : '#D1D5DB'};
+          box-shadow:${c.thali ? '0 4px 12px rgba(255,107,53,0.3)' : 'none'};
+          opacity:${c.attended ? 1 : 0.5};
+          transition:all 0.2s ease;display:flex;flex-direction:column;align-items:center;gap:3px;
+        ">
+          <span style="font-size:18px;">🍱</span>Thali
+        </button>
+
+        <button onclick="openExtras('${c.id}')" ${!c.attended ? 'disabled' : ''} style="
+          flex:1;padding:10px 6px;border-radius:12px;border:none;
+          cursor:${c.attended ? 'pointer' : 'not-allowed'};
+          font-weight:800;font-size:12px;font-family:inherit;
+          background:#FFF1F2;color:${c.attended ? '#E23744' : '#D1D5DB'};
+          opacity:${c.attended ? 1 : 0.5};
+          transition:all 0.2s ease;display:flex;flex-direction:column;align-items:center;gap:3px;
+        ">
+          <span style="font-size:18px;">➕</span>Extras
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ─── INTERACTIONS ────────────────────────────────────────────────────────────
+function toggleAttendance(id) {
+  customers = customers.map(c =>
+    c.id===id ? {...c, attended:!c.attended, thali: !c.attended ? c.thali : false } : c
+  );
+  renderAll();
+}
+
+function toggleThali(id) {
+  customers = customers.map(c =>
+    c.id===id && c.attended ? {...c, thali:!c.thali} : c
+  );
+  renderAll();
+}
+
+function setShift(s) {
+  currentShift = s;
+  ["morning","evening"].forEach(sh => {
+    const btn = document.getElementById("shift" + sh.charAt(0).toUpperCase()+sh.slice(1));
+    if(sh===s) {
+      btn.style.background = "linear-gradient(135deg,#E23744,#FF6B35)";
+      btn.style.color = "#fff";
+      btn.style.boxShadow = "0 4px 12px rgba(226,55,68,0.35)";
+    } else {
+      btn.style.background = "transparent";
+      btn.style.color = "#7C7C7C";
+      btn.style.boxShadow = "none";
+    }
+  });
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  ["all","monthly","daily"].forEach(fl => {
+    const btn = document.getElementById("filter" + fl.charAt(0).toUpperCase()+fl.slice(1));
+    if(fl===f) {
+      btn.style.background = "linear-gradient(135deg,#E23744,#FF6B35)";
+      btn.style.color = "#fff";
+      btn.style.border = "none";
+      btn.style.boxShadow = "0 4px 12px rgba(226,55,68,0.25)";
+    } else {
+      btn.style.background = "#FFF8F5";
+      btn.style.color = "#7C7C7C";
+      btn.style.border = "1.5px solid #FFE0D4";
+      btn.style.boxShadow = "none";
+    }
+  });
+  renderCards();
+}
+
+function filterCustomers() {
+  currentSearch = document.getElementById("searchInput").value;
+  renderCards();
+}
+
+// ─── EXTRAS MODAL ───────────────────────────────────────────────────────────
+function openExtras(id) {
+  openModalId = id;
+  selectedExtras = {};
+  const c = customers.find(x=>x.id===id);
+  document.getElementById("modalTitle").textContent = "Add Extras";
+  document.getElementById("modalSubtitle").textContent = "for " + c.name;
+  renderModalItems();
+  document.getElementById("extrasOverlay").style.display = "flex";
+}
+
+function renderModalItems() {
+  document.getElementById("extrasItemList").innerHTML = EXTRAS.map(e => {
+    const qty = selectedExtras[e.id] || 0;
+    return `
+      <div style="
+        display:flex;align-items:center;padding:13px 14px;border-radius:14px;
+        border:1.5px solid ${qty>0 ? '#FF6B35' : '#F3F4F6'};
+        background:${qty>0 ? '#FFF8F5' : '#fff'};transition:all 0.2s;
+      ">
+        <span style="font-size:22px;margin-right:12px;">${e.icon}</span>
+        <div style="flex:1;">
+          <p style="font-weight:700;color:#1C1C1C;font-size:14px;margin:0;">${e.name}</p>
+          <p style="color:#E23744;font-weight:800;font-size:13px;margin:2px 0 0;">₹${e.price} each</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="adjustExtra('${e.id}',-1)" style="
+            width:30px;height:30px;border-radius:50%;border:1.5px solid #E5E7EB;
+            background:#fff;cursor:pointer;font-weight:900;font-size:18px;color:#6B7280;
+            display:flex;align-items:center;justify-content:center;font-family:inherit;
+          ">−</button>
+          <span style="font-weight:900;font-size:16px;color:#1C1C1C;min-width:20px;text-align:center;">${qty}</span>
+          <button onclick="adjustExtra('${e.id}',1)" style="
+            width:30px;height:30px;border-radius:50%;border:none;
+            background:linear-gradient(135deg,#E23744,#FF6B35);
+            cursor:pointer;font-weight:900;font-size:18px;color:#fff;
+            display:flex;align-items:center;justify-content:center;font-family:inherit;
+            box-shadow:0 2px 8px rgba(226,55,68,0.3);
+          ">+</button>
+        </div>
+      </div>`;
+  }).join("");
+  const total = Object.entries(selectedExtras).reduce((s,[id,qty])=>{
+    const it = EXTRAS.find(e=>e.id===id); return s+(it?it.price*qty:0);
+  },0);
+  document.getElementById("modalTotal").textContent = "₹" + total;
+}
+
+function adjustExtra(itemId, delta) {
+  selectedExtras[itemId] = Math.max(0, (selectedExtras[itemId]||0) + delta);
+  renderModalItems();
+}
+
+function saveExtras() {
+  const total = Object.values(selectedExtras).reduce((s,v)=>s+v,0);
+  customers = customers.map(c=>c.id===openModalId ? {...c,extras:c.extras+total} : c);
+  closeExtras();
+  renderAll();
+}
+
+function closeExtras() {
+  document.getElementById("extrasOverlay").style.display = "none";
+  openModalId = null;
+}
+
+function closeModal(e) {
+  if(e.target===document.getElementById("extrasOverlay")) closeExtras();
+}
+
+// ─── INIT SHIFT BUTTON STATE ─────────────────────────────────────────────────
+function initShiftBtns() {
+  const btn = document.getElementById("shiftMorning");
+  btn.style.background = "linear-gradient(135deg,#E23744,#FF6B35)";
+  btn.style.color = "#fff";
+  btn.style.boxShadow = "0 4px 12px rgba(226,55,68,0.35)";
+  // init filter btn
+  const fb = document.getElementById("filterAll");
+  fb.style.background = "linear-gradient(135deg,#E23744,#FF6B35)";
+  fb.style.color = "#fff";
+  fb.style.border = "none";
+  fb.style.boxShadow = "0 4px 12px rgba(226,55,68,0.25)";
+}
+
+// ─── RENDER ALL ──────────────────────────────────────────────────────────────
+function renderAll() {
+  renderStats();
+  renderCards();
+  renderExtrasPanel();
+}
+
+initShiftBtns();
+renderAll();
+</script>
+</body>
+</html>
